@@ -197,7 +197,7 @@
             if (!checkRateLimit()) return;
             if (!validateCaptcha()) return;
 
-            fetch(apiModUrlRoll + '/backups')
+            fetch(apiModUrlRoll + '/catalog')
             .then(response => response.json())
             .then(data => {
                 const backupDates = data.backups || [];
