@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
 app.post('/backup-chats', async (req, res) => {
   try {
     // Make a POST request to the Flask API
-    const response = await axios.post('http://54.173.251.44:6001/copy_chats');
+    const response = await axios.post('http://3.227.120.143:6001/copy_chats');
     
     // Send Flask's response to the client
     res.status(201).json(response.data);
@@ -43,7 +43,7 @@ app.post('/restore-chats', async (req, res) => {
     }
     
     // Make a POST request to the Flask microservice to restore the chats
-    const response = await axios.post('http://54.173.251.44:6006/restore_chats', { restore_date: restoreDate });
+    const response = await axios.post('http://3.227.120.143:6006/restore_chats', { restore_date: restoreDate });
     
     // Send Flask's response to the client
     res.status(201).json(response.data);
@@ -60,5 +60,5 @@ app.get('/health', (req, res) => {
 
 // Start the server
 app.listen(port, () => {
-  console.log(`Chat management server running at http://54.173.251.44:${port}`);
+  console.log(`Chat management server running at http://54.166.118.216:${port}`);
 });
