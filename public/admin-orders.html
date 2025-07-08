@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Orders Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+        nav {
+            background-color: #007bff;
+            padding: 10px 0;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 20px;
+            font-size: 16px;
+            padding: 10px;
+        }
+        nav a:hover {
+            background-color: #0056b3;
+            border-radius: 5px;
+        }
+        .container {
+            padding: 20px;
+        }
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e9e9e9;
+            border-radius: 5px;
+        }
+        #backup-info, #restore-info {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Admin Orders Management</h1>
+    </header>
+    <!-- Navigation bar -->
+    <nav>
+        <a href="admin-chat.html">Admin Chat</a>
+        <a href="admin-images.html">Admin Images</a>
+        <a href="admin-models.html">Admin Models</a>
+        <a href="admin-orders.html">Admin Orders</a>
+        <a href="admin-user.html">Admin User</a>
+    </nav>
+    
+    <div class="container">
+        <h2>Backup Management</h2>
+        <button class="button" onclick="backupOrders()">Backup Orders</button>
+        <div id="backup-info"></div>
+
+        <h2>Backup Status</h2>
+        <button class="button" onclick="getLastBackupStatus()">Get Last Backup Status</button>
+        <div id="backup-status"></div>
+
+        <h2>Restore Orders</h2>
+        <input type="text" id="restore-date" placeholder="Enter Backup Date (YYYY-MM-DD HH:MM:SS)">
+        <button class="button" onclick="restoreOrders()">Restore Orders</button>
+        <div id="restore-info"></div>
+
+        <h2>Available Backups</h2>
+        <button class="button" onclick="getBackups()">Get Available Backups</button>
+        <div id="available-backups"></div>
+
+        <h2>Captcha Verification</h2>
+        <input type="text" id="captcha-input" placeholder="Enter CAPTCHA code (1234)">
+        <div id="captcha-message"></div>
+    </div>
+
+    <script>
+        const apiOrdUrlBak = "http://54.173.251.44:6004";  // Change if the microservice is on a different port
+        const apiOrdUrlRoll = "http://54.173.251.44:6009";
+        
+        const captcha = "1234";  // This would be generated dynamically in a real system
+
+        // Backup Orders
+        function backupOrders() {
+            if (!validateCaptcha()) return;
+
+            fetch(apiOrdUrlBak + '/backup_orders', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('backup-info').innerHTML = `<div class="message">${data.message}</div>`;
+            })
+            .catch(error => {
+                document.getElementById('backup-info').innerHTML = `<div class="message">Error: ${error}</div>`;
+            });
+        }
+
+        // Get Last Backup Status
+        function getLastBackupStatus() {
+            if (!validateCaptcha()) return;
+
+            fetch(apiOrdUrlBak + '/last_backup')
+            .then(response => response.json())
+            .then(data => {
+                if (data.time_elapsed) {
+                    document.getElementById('backup-status').innerHTML = `<div class="message">
+                        Last Backup: ${data.last_backup_timestamp}<br>
+                        Time Elapsed: ${data.time_elapsed}
+                    </div>`;
+                } else {
+                    document.getElementById('backup-status').innerHTML = `<div class="message">${data.message}</div>`;
+                }
+            })
+            .catch(error => {
+                document.getElementById('backup-status').innerHTML = `<div class="message">Error: ${error}</div>`;
+            });
+        }
+            
+        // Restore Orders from Backup
+        function restoreOrders() {
+            if (!validateCaptcha()) return;
+
+            const restoreDate = document.getElementById('restore-date').value;
+            if (!restoreDate) {
+                alert("Please enter a valid backup date.");
+                return;
+            }
+
+            fetch(apiOrdUrlRoll + '/restore_orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ restore_date: restoreDate }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('restore-info').innerHTML = `<div class="message">${data.message}</div>`;
+            })
+            .catch(error => {
+                document.getElementById('restore-info').innerHTML = `<div class="message">Error: ${error}</div>`;
+            });
+        }
+
+        // Get Available Backups
+        function getBackups() {
+            if (!validateCaptcha()) return;
+
+            fetch(apiOrdUrlRoll + '/backups')
+            .then(response => response.json())
+            .then(data => {
+                const backupDates = data || [];
+                const backupList = backupDates.length > 0 
+                    ? backupDates.map(date => `<li>${date.backup_date}</li>`).join('')
+                    : 'No backups available';
+                document.getElementById('available-backups').innerHTML = `<ul>${backupList}</ul>`;
+            })
+            .catch(error => {
+                document.getElementById('available-backups').innerHTML = `<div class="message">Error: ${error}</div>`;
+            });
+        }
+
+        // CAPTCHA Validation
+        function validateCaptcha() {
+            const captchaInput = document.getElementById('captcha-input').value;
+            if (captchaInput === captcha) {
+                document.getElementById('captcha-message').innerHTML = '<div class="message">CAPTCHA valid!</div>';
+                return true;
+            } else {
+                document.getElementById('captcha-message').innerHTML = '<div class="message">Invalid CAPTCHA. Please try again.</div>';
+                return false;
+            }
+        }
+    </script>    
+</body>
+</html>

@@ -1,0 +1,62 @@
+name: Deploy to EC2 on Push
+
+on:
+  push:
+    branches:
+      - test
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: 54.166.118.216
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            # Local installation path
+            export NODE_DIR=$HOME/.local-node
+            export PATH=$NODE_DIR/bin:$PATH
+
+            # Install Node.js locally if it doesn't exist
+            if ! command -v node >/dev/null 2>&1; then
+              echo "⚙️ Installing Node.js locally..."
+              mkdir -p $NODE_DIR
+              curl -fsSL https://nodejs.org/dist/v18.18.2/node-v18.18.2-linux-x64.tar.xz -o node.tar.xz
+              tar -xf node.tar.xz -C $NODE_DIR --strip-components=1
+              rm node.tar.xz
+            else
+              echo "✅ Node.js detected: $(node -v)"
+            fi
+
+            # Confirm that node and npm are accessible
+            echo "🟢 Node.js path: $(which node)"
+            echo "🟢 NPM path: $(which npm)"
+
+            # Clone or update the repository
+            if [ -d ~/BackupInterfaceWEB ]; then
+              cd ~/BackupInterfaceWEB
+              git pull origin test
+            else
+              git clone -b test https://github.com/Bryan03A/BackupInterfaceWEB ~/BackupInterfaceWEB
+              cd ~/BackupInterfaceWEB
+            fi
+
+            # Install dependencies (includes pm2 locally)
+            npm install
+
+            # Stop previous instance if it exists
+            npx pm2 delete interface-service-backups || true
+
+            # Start the app with PM2 locally
+            npx pm2 start server.js --name interface-service-backups
+
+            # Save the configuration
+            npx pm2 save
